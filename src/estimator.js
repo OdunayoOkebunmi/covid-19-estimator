@@ -23,8 +23,7 @@ const getFactor = (timeToElapse, periodType) => {
       numberOfDays = timeToElapse * 30;
       return Math.trunc(numberOfDays / 3);
     default:
-      numberOfDays = timeToElapse * 7;
-      return Math.trunc(numberOfDays / 3);
+      return numberOfDays;
   }
 };
 const getAvailableBed = (infectionsByRequestedTime, totalHospitalBeds) => {
@@ -33,15 +32,21 @@ const getAvailableBed = (infectionsByRequestedTime, totalHospitalBeds) => {
   const hospitalBedsByRequestedTime = availableHospitalBeds - severeCasesByRequestedTime;
   return [Math.round(severeCasesByRequestedTime), Math.trunc(hospitalBedsByRequestedTime)];
 };
-const getDollarsInFlight = (infectionsByRequestedTime, timeToElapse,
+const getDollarsInFlight = (periodType, timeToElapse,
   avgDailyIncomeInUSD, avgDailyIncomePopulation) => {
-  const numberOfDays = timeToElapse;
-  const casesForICUByRequestedTime = (infectionsByRequestedTime * 0.05);
-  const casesForVentilatorsByRequestedTime = (infectionsByRequestedTime * 0.02);
-  const dollarsInFlight = (infectionsByRequestedTime * avgDailyIncomePopulation)
-    * avgDailyIncomeInUSD * numberOfDays;
-  return [Math.trunc(casesForICUByRequestedTime),
-    Math.trunc(casesForVentilatorsByRequestedTime), Math.trunc(dollarsInFlight)];
+  let numberOfDays = timeToElapse;
+  switch (periodType) {
+    case 'days':
+      return (avgDailyIncomeInUSD * avgDailyIncomePopulation) / timeToElapse;
+    case 'weeks':
+      numberOfDays = timeToElapse * 7;
+      return (avgDailyIncomeInUSD * avgDailyIncomePopulation) / numberOfDays;
+    case 'months':
+      numberOfDays = timeToElapse * 30;
+      return (avgDailyIncomeInUSD * avgDailyIncomePopulation) / numberOfDays;
+    default:
+      return numberOfDays;
+  }
 };
 const impactEstimator = (data, rate) => {
   const {
@@ -51,12 +56,12 @@ const impactEstimator = (data, rate) => {
   const currentlyInfected = reportedCases * rate;
   const factor = getFactor(timeToElapse, periodType);
   const infectionsByRequestedTime = (currentlyInfected * 2 ** factor);
+  const casesForICUByRequestedTime = Math.trunc(infectionsByRequestedTime * 0.05);
+  const casesForVentilatorsByRequestedTime = Math.trunc(infectionsByRequestedTime * 0.02);
   const [severeCasesByRequestedTime, hospitalBedsByRequestedTime] = getAvailableBed(
     infectionsByRequestedTime, totalHospitalBeds
   );
-  const [casesForICUByRequestedTime,
-    casesForVentilatorsByRequestedTime,
-    dollarsInFlight] = getDollarsInFlight(infectionsByRequestedTime, timeToElapse,
+  const dollarsInFlight = getDollarsInFlight(periodType, timeToElapse,
     avgDailyIncomeInUSD, avgDailyIncomePopulation);
   const impact = {
     currentlyInfected,
@@ -65,7 +70,7 @@ const impactEstimator = (data, rate) => {
     hospitalBedsByRequestedTime,
     casesForICUByRequestedTime,
     casesForVentilatorsByRequestedTime,
-    dollarsInFlight
+    dollarsInFlight: Math.trunc(dollarsInFlight * infectionsByRequestedTime)
   };
   return impact;
 };
