@@ -80,4 +80,5 @@ const covid19ImpactEstimator = (data) => ({
   severeImpact: impactEstimator(data, 50)
 });
 // console.log(covid19ImpactEstimator(inputData));
+
 export default covid19ImpactEstimator;
